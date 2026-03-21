@@ -23,96 +23,125 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ─── THEME CONFIG ──────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown('<div class="section-label">Preferências</div>', unsafe_allow_html=True)
+    light_mode = st.toggle("Modo Claro", value=False)
+
 # ─── CUSTOM CSS ────────────────────────────────────────────────────────────────
-st.markdown("""
+if light_mode:
+    # LIGHT MODE COLORS
+    bg_app      = "#fcfcfc"
+    bg_sidebar  = "#f5f5f7"
+    text_main   = "#1d1d1f"
+    text_sub    = "#86868b"
+    card_bg     = "#ffffff"
+    card_border = "#e5e5e7"
+    input_bg    = "#ffffff"
+    input_border= "#d2d2d7"
+    gold        = "#c9a96e"
+else:
+    # DARK MODE COLORS
+    bg_app      = "#0d0d0f"
+    bg_sidebar  = "#111114"
+    text_main   = "#e8e3d8"
+    text_sub    = "#6b6b78"
+    card_bg     = "#111114"
+    card_border = "#1e1e24"
+    input_bg    = "#111114"
+    input_border= "#2a2a32"
+    gold        = "#c9a96e"
+
+st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-html, body, [class*="css"] {
+html, body, [class*="css"] {{
     font-family: 'DM Sans', sans-serif;
-}
+}}
 
-.stApp {
-    background: #0d0d0f;
-    color: #e8e3d8;
-}
+.stApp {{
+    background: {bg_app};
+    color: {text_main};
+}}
 
-[data-testid="stSidebar"] {
-    background: #111114 !important;
-    border-right: 1px solid #1e1e24;
-}
+[data-testid="stSidebar"] {{
+    background: {bg_sidebar} !important;
+    border-right: 1px solid {card_border};
+}}
 
-.hero-title {
+.hero-title {{
     font-family: 'DM Serif Display', serif;
     font-size: 3.2rem;
     font-weight: 400;
-    color: #e8e3d8;
+    color: {text_main};
     line-height: 1.1;
     margin: 0;
     letter-spacing: -0.02em;
-}
+}}
 
-.hero-title em {
+.hero-title em {{
     font-style: italic;
-    color: #c9a96e;
-}
+    color: {gold};
+}}
 
-.hero-sub {
+.hero-sub {{
     font-size: 1.05rem;
-    color: #6b6b78;
+    color: {text_sub};
     font-weight: 300;
     margin-top: 0.6rem;
     letter-spacing: 0.01em;
-}
+}}
 
-.section-label {
+.section-label {{
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: #c9a96e;
+    color: {gold};
     margin-bottom: 0.5rem;
-}
+}}
 
-.card {
-    background: #111114;
-    border: 1px solid #1e1e24;
+.card {{
+    background: {card_bg};
+    border: 1px solid {card_border};
     border-radius: 12px;
     padding: 1.4rem 1.6rem;
     margin-bottom: 1rem;
-}
+    { "box-shadow: 0 4px 20px rgba(0,0,0,0.04);" if light_mode else "" }
+}}
 
-.ref-card {
-    background: #111114;
-    border: 1px solid #1e1e24;
-    border-left: 3px solid #c9a96e;
+.ref-card {{
+    background: {card_bg};
+    border: 1px solid {card_border};
+    border-left: 3px solid {gold};
     border-radius: 0 8px 8px 0;
     padding: 0.9rem 1.1rem;
     margin-bottom: 0.7rem;
-}
+}}
 
-.ref-title {
+.ref-title {{
     font-size: 0.88rem;
     font-weight: 500;
-    color: #e8e3d8;
+    color: {text_main};
     margin: 0 0 0.2rem;
-}
+}}
 
-.ref-url {
+.ref-url {{
     font-size: 0.72rem;
-    color: #6b6b78;
+    color: {text_sub};
     margin: 0;
     word-break: break-all;
-}
+}}
 
-.ref-body {
+.ref-body {{
     font-size: 0.8rem;
-    color: #9b9aa6;
+    color: {text_sub if light_mode else "#9b9aa6"};
     margin-top: 0.35rem;
     line-height: 1.5;
-}
+}}
 
-.status-pill {
+.status-pill {{
     display: inline-block;
     padding: 0.2rem 0.8rem;
     border-radius: 100px;
@@ -120,48 +149,49 @@ html, body, [class*="css"] {
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-}
+}}
 
-.pill-ok   { background: #0a2a1a; color: #4ade80; border: 1px solid #166534; }
-.pill-warn { background: #2a1a0a; color: #fb923c; border: 1px solid #7c2d12; }
-.pill-info { background: #0a1a2a; color: #60a5fa; border: 1px solid #1e3a5f; }
+.pill-ok   {{ background: {"#e6f4ea" if light_mode else "#0a2a1a"}; color: {"#1e8e3e" if light_mode else "#4ade80"}; border: 1px solid {"#ceead6" if light_mode else "#166534"}; }}
+.pill-warn {{ background: {"#fef7e0" if light_mode else "#2a1a0a"}; color: {"#b06000" if light_mode else "#fb923c"}; border: 1px solid {"#feefc3" if light_mode else "#7c2d12"}; }}
+.pill-info {{ background: {"#e8f0fe" if light_mode else "#0a1a2a"}; color: {"#1967d2" if light_mode else "#60a5fa"}; border: 1px solid {"#d2e3fc" if light_mode else "#1e3a5f"}; }}
 
-.proposal-box {
-    background: #111114;
-    border: 1px solid #1e1e24;
+.proposal-box {{
+    background: {card_bg};
+    border: 1px solid {card_border};
     border-radius: 12px;
     padding: 2rem 2.4rem;
     font-size: 0.92rem;
     line-height: 1.85;
-    color: #d4cfc6;
+    color: {text_main};
     white-space: pre-wrap;
-}
+    { "box-shadow: 0 8px 32px rgba(0,0,0,0.06);" if light_mode else "" }
+}}
 
-.divider {
+.divider {{
     border: none;
-    border-top: 1px solid #1e1e24;
+    border-top: 1px solid {card_border};
     margin: 1.8rem 0;
-}
+}}
 
 /* Streamlit widget overrides */
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
-.stSelectbox > div > div {
-    background: #111114 !important;
-    border: 1px solid #2a2a32 !important;
-    color: #e8e3d8 !important;
+.stSelectbox > div > div {{
+    background: {input_bg} !important;
+    border: 1px solid {input_border} !important;
+    color: {text_main} !important;
     border-radius: 8px !important;
-}
+}}
 
 .stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus {
-    border-color: #c9a96e !important;
+.stTextArea > div > div > textarea:focus {{
+    border-color: {gold} !important;
     box-shadow: 0 0 0 2px rgba(201,169,110,0.15) !important;
-}
+}}
 
-.stButton > button {
-    background: #c9a96e !important;
-    color: #0d0d0f !important;
+.stButton > button {{
+    background: {gold} !important;
+    color: {"#ffffff" if light_mode else "#0d0d0f"} !important;
     font-weight: 600 !important;
     border: none !important;
     border-radius: 8px !important;
@@ -169,35 +199,36 @@ html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif !important;
     letter-spacing: 0.04em !important;
     transition: all 0.2s !important;
-}
+}}
 
-.stButton > button:hover {
-    background: #e0be82 !important;
+.stButton > button:hover {{
+    background: {"#dcb87d" if light_mode else "#e0be82"} !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(201,169,110,0.25) !important;
-}
+    box-shadow: 0 4px 16px rgba(201,169,110,{ "0.15" if light_mode else "0.25" }) !important;
+}}
 
-[data-testid="stDownloadButton"] > button {
+[data-testid="stDownloadButton"] > button {{
     background: transparent !important;
-    color: #c9a96e !important;
-    border: 1px solid #c9a96e !important;
+    color: {gold} !important;
+    border: 1px solid {gold} !important;
     font-weight: 600 !important;
-}
+}}
 
-[data-testid="stDownloadButton"] > button:hover {
+[data-testid="stDownloadButton"] > button:hover {{
     background: rgba(201,169,110,0.1) !important;
-}
+}}
 
-.stSpinner > div { border-top-color: #c9a96e !important; }
+.stSpinner > div {{ border-top-color: {gold} !important; }}
 
-label, .stSelectbox label { color: #9b9aa6 !important; font-size: 0.82rem !important; }
+label, .stSelectbox label {{ color: {text_sub} !important; font-size: 0.82rem !important; }}
 
-.stSlider .stSlider { accent-color: #c9a96e; }
+.stSlider .stSlider {{ accent-color: {gold}; }}
 </style>
 """, unsafe_allow_html=True)
 
-# ─── SIDEBAR ───────────────────────────────────────────────────────────────────
+# ─── SIDEBAR CONTINUED ────────────────────────────────────────────────────────
 with st.sidebar:
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
     st.markdown('<div class="section-label">Configuração</div>', unsafe_allow_html=True)
 
     openrouter_key = st.text_input(
