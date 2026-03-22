@@ -14,6 +14,59 @@ from reportlab.platypus import (
     HRFlowable, KeepTogether
 )
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+import os
+
+# ─── STORAGE CONFIG ───────────────────────────────────────────────────────────
+PROPOSALS_DIR = "data"
+PROPOSALS_FILE = os.path.join(PROPOSALS_DIR, "proposals.json")
+
+def ensure_storage():
+    if not os.path.exists(PROPOSALS_DIR):
+        os.makedirs(PROPOSALS_DIR)
+    if not os.path.exists(PROPOSALS_FILE):
+        with open(PROPOSALS_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
+
+def load_proposals():
+    ensure_storage()
+    try:
+        with open(PROPOSALS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_proposal(entry: dict):
+    proposals = load_proposals()
+    proposals.insert(0, entry) # Newest first
+    with open(PROPOSALS_FILE, "w", encoding="utf-8") as f:
+        json.dump(proposals, f, indent=4, ensure_ascii=False)
+
+def get_relevant_context(query: str, limit: int = 3) -> str:
+    proposals = load_proposals()
+    if not proposals: return ""
+    
+    # Simple keyword matching for "learning"
+    relevant = []
+    query_words = set(query.lower().split())
+    
+    for p in proposals:
+        score = 0
+        p_text = (p.get("title", "") + " " + p.get("desc", "") + " " + p.get("keywords", "")).lower()
+        for word in query_words:
+            if len(word) > 3 and word in p_text:
+                score += 1
+        if score > 0:
+            relevant.append((score, p))
+            
+    relevant.sort(key=lambda x: x[0], reverse=True)
+    
+    context_str = ""
+    if relevant:
+        context_str = "\n\nCONHECIMENTO PRÉVIO (PROPOSTAS ANTERIORES RELACIONADAS):\n"
+        for _, p in relevant[:limit]:
+            context_str += f"- Proposta para {p.get('client','Cliente')}: {p.get('title','Sem título')}. Contexto: {p.get('desc','')[:200]}...\n"
+            
+    return context_str
 
 # ─── PAGE CONFIG ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -238,6 +291,8 @@ with st.sidebar:
         placeholder="sk-or-...",
         help="Obtenha em openrouter.ai"
     )
+    if not openrouter_key:
+        st.warning("⚠️ Insira uma API Key do OpenRouter para funcionar.")
 
     model_options = {
         "GLM-4.5-Air (gratuito)": "z-ai/glm-4.5-air:free",
@@ -300,23 +355,64 @@ with col_left:
     )
 
     run_btn = st.button("✦ Gerar Proposta", use_container_width=True)
+    
+    if st.button("↺ Limpar Briefing", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
 with col_right:
-    st.markdown('<div class="section-label">Resultado</div>', unsafe_allow_html=True)
-    result_placeholder = st.empty()
-    result_placeholder.markdown(
-        '<div class="card" style="color:#6b6b78;font-size:0.88rem;text-align:center;padding:3rem 1rem;">'
-        '✦<br><br>Preencha o briefing e clique em<br><strong style="color:#c9a96e">Gerar Proposta</strong>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+    tab_result, tab_history = st.tabs(["✨ Resultado Atual", "📁 Histórico"])
+    
+    with tab_result:
+        st.markdown('<div class="section-label">Resultado</div>', unsafe_allow_html=True)
+        result_placeholder = st.empty()
+        result_placeholder.markdown(
+            '<div class="card" style="color:#6b6b78;font-size:0.88rem;text-align:center;padding:3rem 1rem;">'
+            '✦<br><br>Preencha o briefing e clique em<br><strong style="color:#c9a96e">Gerar Proposta</strong>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+    with tab_history:
+        st.markdown('<div class="section-label">Propostas Salvas</div>', unsafe_allow_html=True)
+        saved_proposals = load_proposals()
+        if not saved_proposals:
+            st.info("Nenhuma proposta salva ainda.")
+        else:
+            for i, p in enumerate(saved_proposals):
+                with st.expander(f"📅 {p['date']} - {p['client']} - {p['title']}"):
+                    st.markdown(f"**Tipo:** {p['type']}")
+                    st.markdown(f"**Palavras-chave:** {p['keywords']}")
+                    st.markdown(f'<div class="proposal-box" style="font-size:0.85rem; max-height:300px; overflow-y:auto;">{p["content"]}</div>', unsafe_allow_html=True)
+                    
+                    # Re-generate PDF functionality
+                    try:
+                        pdf_data_hist = generate_pdf(
+                            proposal_text=p["content"],
+                            references=p.get("references", []),
+                            project_title=p["title"],
+                            client_name=p["client"],
+                            your_name=p["your_name"],
+                            your_role=p["your_role"]
+                        )
+                        st.download_button(
+                            f"⬇ Baixar PDF Novamente (#{i})",
+                            data=pdf_data_hist,
+                            file_name=f"re_proposta_{i}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_{i}"
+                        )
+                    except Exception as e:
+                        st.error(f"Erro ao gerar PDF do histórico: {e}")
 
 # ─── SEARCH FUNCTION ───────────────────────────────────────────────────────────
 def search_web(query: str, max_results: int = 5) -> list[dict]:
     results = []
     try:
         with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=max_results, region="pt-br"):
+            ddgs_gen = ddgs.text(query, region='pt-pt', safesearch='off', timelimit='m') # 'm' for month
+            for i, r in enumerate(ddgs_gen):
+                if i >= max_results: break
                 results.append({
                     "title": r.get("title", ""),
                     "url":   r.get("href", ""),
@@ -528,6 +624,9 @@ if run_btn:
         st.stop()
 
     with result_placeholder.container():
+        # ── Step 0: Retrieval (Learning)
+        historical_context = get_relevant_context(f"{project_title} {project_desc} {keywords}")
+        
         # ── Step 1: Search
         st.markdown('<div class="section-label">① Buscando referências...</div>', unsafe_allow_html=True)
         search_query = keywords if keywords else f"{proposal_type} {project_desc[:120]}"
@@ -611,7 +710,9 @@ REGRAS DE ESCRITA
 - Extensão ideal: 600-900 palavras de conteúdo real (sem contar cabeçalhos)
 - Tom {tone}: aplica isso na escolha de palavras, não na estrutura"""
 
-        user_prompt = f"""BRIEFING DO PROJETO
+        user_prompt = f"""{historical_context}
+
+BRIEFING DO PROJETO
 
 Cliente: {client_name or 'Cliente'}
 Título do projeto: {project_title or 'Projeto'}
@@ -656,7 +757,26 @@ Agora escreve a proposta completa seguindo exactamente a estrutura e filosofia d
                 )
                 st.markdown('<span class="status-pill pill-info">PDF pronto para download</span>', unsafe_allow_html=True)
 
+                # ── Step 4: Save (Persistence)
+                save_proposal({
+                    "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "client": client_name,
+                    "title": project_title,
+                    "desc": project_desc,
+                    "keywords": keywords,
+                    "type": proposal_type,
+                    "content": proposal,
+                    "references": refs,
+                    "your_name": your_name,
+                    "your_role": your_role
+                })
+                st.markdown('<span class="status-pill pill-info">✓ Proposta salva no histórico</span>', unsafe_allow_html=True)
+
             except requests.exceptions.HTTPError as e:
-                st.error(f"Erro na API OpenRouter: {e.response.status_code} — {e.response.text[:300]}")
+                msg = e.response.text
+                if "User not found" in msg or e.response.status_code == 401:
+                    st.error("🔑 Erro de Autenticação: A API Key do OpenRouter é inválida ou foi desativada. Verifique se há saldo na sua conta em openrouter.ai.")
+                else:
+                    st.error(f"Erro na API OpenRouter: {e.response.status_code} — {msg[:300]}")
             except Exception as e:
                 st.error(f"Erro inesperado: {e}")
