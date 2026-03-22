@@ -15,6 +15,10 @@ from reportlab.platypus import (
 )
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
 import os
+from dotenv import load_dotenv
+
+# ─── LOAD ENVIRONMENT ──────────────────────────────────────────────────────────
+load_dotenv()
 
 # ─── STORAGE CONFIG ───────────────────────────────────────────────────────────
 PROPOSALS_DIR = "data"
@@ -284,9 +288,10 @@ with st.sidebar:
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
     st.markdown('<div class="section-label">Configuração</div>', unsafe_allow_html=True)
 
+    env_key = os.getenv("OPENROUTER_API_KEY", "")
     openrouter_key = st.text_input(
         "OpenRouter API Key",
-        value="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",
+        value=env_key,
         type="password",
         placeholder="sk-or-...",
         help="Obtenha em openrouter.ai"

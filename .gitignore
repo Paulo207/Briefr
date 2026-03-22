@@ -5,3 +5,4 @@ __pycache__/
 files.zip
 proposta_*.pdf
 *.log
+.env
